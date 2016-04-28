@@ -36,7 +36,8 @@ public class PollutionSign  implements HRMSign {
 		block.setType(Material.SIGN_POST);
 		Sign sign = (Sign) block.getState();
 		sign.setLine(0, "PPM");
-		sign.setLine(1, String.format("%f (%f)", pollutionValue, oldValue));
+		sign.setLine(1, String.format("%f", pollutionValue));
+		sign.setLine(2, String.format("(%f)", oldValue));
 		sign.update();
 	}
 
