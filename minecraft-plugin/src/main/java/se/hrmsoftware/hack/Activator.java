@@ -1,7 +1,9 @@
 package se.hrmsoftware.hack;
 
+import com.google.gson.Gson;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
@@ -11,17 +13,151 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import spark.Request;
+import spark.Response;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import static spark.Spark.*;
 
 public class Activator extends JavaPlugin implements Listener {
 
+	public static class UpdateSignRequest {
+		private final String[] lines;
+
+		public UpdateSignRequest(String[] lines) {
+			this.lines = lines;
+		}
+
+		public String[] getLines() {
+			return lines;
+		}
+	}
+
+	public static class CreateSignRequest {
+		private final Double x;
+		private final Double y;
+		private final String[] lines;
+
+		public CreateSignRequest(Double x, Double y, String[] lines) {
+			this.x = x;
+			this.y = y;
+			this.lines = lines;
+		}
+
+		public Double getX() {
+			return x;
+		}
+
+		public Double getY() {
+			return y;
+		}
+
+		public String[] getLines() {
+			return lines;
+		}
+	}
+
+	private static final class SignAtLocation {
+		public Location location;
+		public String[] data;
+		public static SignAtLocation of(Location loc, String[] data) {
+			SignAtLocation r = new SignAtLocation();
+			r.location = loc;
+			r.data = data;
+			return r;
+		}
+	}
+	private final Gson gson = new Gson();
+	private final ConcurrentMap<String, SignAtLocation> signs = new ConcurrentHashMap<>();
+
+	// REST-API
+
+	private Location defaultWorldLocation(double x, double y) {
+		World world = getServer().getWorlds().get(0);
+		return new Location(world, x, world.getHighestBlockYAt((int)x, (int)y), y);
+	}
+
+	private Object onGet(Request request, Response response) throws Exception {
+		SignAtLocation s = signs.get(request.params(":uid"));
+		if (s != null) {
+			Map<String,Object> r = new HashMap<>();
+			r.put("lines", s.data);
+			return r;
+		} else {
+			response.status(404);
+			return null;
+		}
+	}
+
+	private Object onPost(Request request, Response response) throws Exception {
+		CreateSignRequest req = gson.fromJson(request.body(), CreateSignRequest.class);
+		return createSign(defaultWorldLocation(req.getX(), req.getY()), req.getLines());
+	}
+	private Object onPut(Request request, Response response) throws Exception {
+		UpdateSignRequest req = gson.fromJson(request.body(), UpdateSignRequest.class);
+		SignAtLocation signAtLocation = signs.get(request.params(":uid"));
+		if (signAtLocation != null) {
+			getServer().getScheduler().runTask(this, () -> {
+				Sign sign = (Sign) signAtLocation.location.getBlock().getState();
+				for (int i = 0; i < req.getLines().length; i++) {
+					String line = req.getLines()[i];
+					sign.setLine(i, line);
+				}
+				sign.update();
+				signs.put(request.params(":uid"), SignAtLocation.of(signAtLocation.location, req.getLines()));
+			});
+		}
+		return null;
+	}
+	private Object onDelete(Request request, Response response) throws Exception {
+		SignAtLocation s = signs.get(request.params(":uid"));
+		if (s != null) {
+			getServer().getScheduler().runTask(this, () -> {
+				s.location.getBlock().setType(Material.AIR);
+			});
+		}
+		return null;
+	}
+
+	private String createSign(Location location, String[] lines) {
+		String uuid = UUID.randomUUID().toString();
+		getServer().getScheduler().runTask(this, () -> {
+			getLogger().info("Creating Sign @ " + location);
+			Block block = location.getBlock();
+			block.setType(Material.SIGN_POST);
+			Sign sign = (Sign) block.getState();
+			for (int i = 0; i < lines.length; i++) {
+				String line = lines[i];
+				sign.setLine(i, line);
+			}
+			sign.update();
+			signs.put(uuid, SignAtLocation.of(location, lines));
+		});
+		return uuid;
+	}
+
+
+
 	@Override public void onEnable() {
-		getLogger().info("ENABLED");
 		getServer().getPluginManager().registerEvents(this, this);
+		// Start spark server
+		init();
+
+		get("/:uid", "application/json", this::onGet, gson::toJson);
+		post("/", "application/json", this::onPost, gson::toJson);
+		put("/:uid", "application/json", this::onPut, gson::toJson);
+		delete("/:uid", "application/json", this::onDelete, gson::toJson);
+
 	}
 
 	@Override public void onDisable() {
-		getLogger().info("DISABLED");
+		// Stop SPARK server
+		stop();
 	}
 
 
