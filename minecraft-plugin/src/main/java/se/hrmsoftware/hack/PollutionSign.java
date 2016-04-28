@@ -3,35 +3,38 @@ package se.hrmsoftware.hack;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Sign;
 
-/**
- * Created by henrikgr on 2016-04-28.
- */
-public class PollutionSign implements HRMSign {
+public class PollutionSign  implements HRMSign {
+	private final Location location;
 
-	Location loc;
-
-	public PollutionSign(Location loc) {
-		this.loc = loc;
+	public PollutionSign(Location location) {
+		this.location = location;
 	}
 
 	public void update(String value) {
+		double pollutionValue = Double.valueOf(value);
+		double treeIndex = calculateTreeIndex(location, 10);
+		render(pollutionValue, pollutionValue - treeEffect(pollutionValue, treeIndex));
+	}
 
-		//todo calculate the tree index also !
-
+	private double treeEffect(double pollutionValue, double treeIndex) {
+		return pollutionValue * treeIndex;
 	}
 
 	@Override
 	public void delete() {
-		//s.location.getBlock().setType(Material.AIR);
+		location.getBlock().setType(Material.AIR);
 	}
 
-	public void render() {
-
-
-
+	public void render(double oldValue, double pollutionValue) {
+		Block block = location.getBlock();
+		block.setType(Material.SIGN_POST);
+		Sign sign = (Sign) block.getState();
+		sign.setLine(0, "PPM");
+		sign.setLine(1, String.format("%f (%f)", pollutionValue, oldValue));
+		sign.update();
 	}
-
 
 	/**
 	 * The tree index is calculated from all the blocks with the type LEAF within a cube with the side blocks*2.
@@ -65,14 +68,10 @@ public class PollutionSign implements HRMSign {
 					if (b.getType().equals(Material.LEAVES) || b.getType().equals(Material.LEAVES_2)) {
 						count++;
 					}
-
-					//b.setType(Material.GLASS);
 				}
 			}
 		}
 
-		return (double) count * 10 / ((double)scanBoxSide * scanBoxSide * scanBoxSide);
+		return (double) count / ((double)scanBoxSide * scanBoxSide * scanBoxSide);
 	}
-
-
 }
