@@ -1,5 +1,7 @@
 package se.hrmsoftware.hack;
 
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
@@ -20,5 +22,10 @@ public class Activator extends JavaPlugin implements Listener {
 	@EventHandler
 	public void handle(PlayerLoginEvent evt) {
 		getLogger().info("Player logged in: " + evt.getPlayer().getDisplayName());
+	}
+
+	@Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+		System.out.println("Command issued by "+sender+": " + command);
+		return false;
 	}
 }

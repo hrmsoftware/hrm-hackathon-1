@@ -1,3 +1,7 @@
 name: hrm-hack
 main: se.hrmsoftware.hack.Activator
 version: 1.0
+commands:
+  signme:
+    description: Demo - spawn a sign here
+    usage: /<command>
