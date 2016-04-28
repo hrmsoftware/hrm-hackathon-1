@@ -24,6 +24,19 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/bukkit-1.9.2-R0.1-SNAPSHOT-shaded.jar</systemPath>
         </dependency>
+        <dependency>
+            <groupId>com.grum</groupId>
+            <artifactId>geocalc</artifactId>
+            <version>0.5.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/geocalc-0.5.1.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
