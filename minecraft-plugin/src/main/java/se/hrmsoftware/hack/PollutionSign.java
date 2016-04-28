@@ -53,6 +53,8 @@ public class PollutionSign  implements HRMSign {
 	 * @return the index.
 	 */
 	private double calculateTreeIndex(Location loc, int blocks) {
+		loc = loc.clone();
+
 		int scanBoxSide = blocks * 2;
 
 		double initalX = loc.getX() + blocks;
