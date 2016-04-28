@@ -18,24 +18,20 @@ class AccidentSign implements HRMSign {
 
 	@Override
 	public void update(String value) {
-
-		Block block = location.getBlock();
+		Location loc = location.clone();
+		Block block = loc.getBlock();
 		block.setType(Material.NETHERRACK);
-
-
-
-
-
-
+		loc.setY(location.getY()+1);
+		loc.getBlock().setType(Material.FIRE);
 	}
 
 	@Override
 	public void delete() {
-
-		Block block = location.getBlock();
+		Location loc = location.clone();
+		Block block = loc.getBlock();
 		block.setType(Material.AIR);
-
-
+		loc.setY(loc.getY()+1);
+		loc.getBlock().setType(Material.AIR);
 	}
 
 	@Override
