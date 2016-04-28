@@ -7,15 +7,15 @@ import org.bukkit.block.Block;
 /**
  * Created by henrikgr on 2016-04-28.
  */
-public class PollutionSign  implements HRMSign {
+public class PollutionSign implements HRMSign {
 
 	Location loc;
 
-	public PollutionSign(Location loc, double value) {
+	public PollutionSign(Location loc) {
 		this.loc = loc;
 	}
 
-	public void update(double value) {
+	public void update(String value) {
 
 		//todo calculate the tree index also !
 

@@ -13,43 +13,65 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import se.hrmsoftware.hack.coordinates.Location2D;
+import se.hrmsoftware.hack.coordinates.MinecraftCoordinateSystem;
 import spark.Request;
 import spark.Response;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import se.hrmsoftware.hack.coordinates.Location2D;
-import se.hrmsoftware.hack.coordinates.MinecraftCoordinateSystem;
+import java.util.stream.Stream;
 
 import static spark.Spark.*;
 
 public class Activator extends JavaPlugin implements Listener {
 
-	public static class UpdateSignRequest {
-		private final String[] lines;
+	private enum SignType {
+		POLLUTION("p"),
+		WATERTEMP("w"),
+		ACCIDENT("a"),
+		DEFAULT("d");
 
-		public UpdateSignRequest(String[] lines) {
-			this.lines = lines;
+		private final String label;
+		SignType(String a) {
+			this.label=a;
 		}
 
-		public String[] getLines() {
-			return lines;
+		public static SignType of(String t) {
+			return Stream.of(values()).filter(v ->  v.label.equals(t)).findFirst().orElse(DEFAULT);
+		}
+	}
+
+
+	public static class DeleteRequest {
+		private final Double latitude;
+		private final Double longitude;
+
+		public DeleteRequest(Double longitude, Double latitude) {
+			this.longitude = longitude;
+			this.latitude = latitude;
+		}
+
+		public Double getLongitude() {
+			return longitude;
+		}
+
+		public Double getLatitude() {
+			return latitude;
 		}
 	}
 
 	public static class CreateSignRequest {
 		private final Double latitude;
 		private final Double longitude;
-		private final String[] lines;
+		private final String value;
+		private final SignType type;
 
-		public CreateSignRequest(Double latitude, Double longitude, String[] lines) {
+		public CreateSignRequest(Double latitude, Double longitude, String value, SignType type) {
 			this.latitude = latitude;
 			this.longitude = longitude;
-			this.lines = lines;
+			this.value = value;
+			this.type = type;
 		}
 
 		public Double getLatitude() {
@@ -60,23 +82,17 @@ public class Activator extends JavaPlugin implements Listener {
 			return longitude;
 		}
 
-		public String[] getLines() {
-			return lines;
+		public String getValue() {
+			return value;
+		}
+
+		public SignType getType() {
+			return type;
 		}
 	}
 
-	private static final class SignAtLocation {
-		public Location location;
-		public String[] data;
-		public static SignAtLocation of(Location loc, String[] data) {
-			SignAtLocation r = new SignAtLocation();
-			r.location = loc;
-			r.data = data;
-			return r;
-		}
-	}
 	private final Gson gson = new Gson();
-	private final ConcurrentMap<String, SignAtLocation> signs = new ConcurrentHashMap<>();
+	private final ConcurrentMap<SignPosition, HRMSign> signs = new ConcurrentHashMap<>();
 	private final MinecraftCoordinateSystem coordinateSystem = new MinecraftCoordinateSystem();
 
 	// REST-API
@@ -85,9 +101,10 @@ public class Activator extends JavaPlugin implements Listener {
 		Location2D worldPoint = coordinateSystem.fromDecimalCoordinates(latitude, longitude);
 		World world = getServer().getWorlds().get(0);
 		return new Location(world, worldPoint.getX(),
-				world.getHighestBlockYAt((int)worldPoint.getX(), (int)worldPoint.getY()), worldPoint.getY());
+				world.getHighestBlockYAt((int) worldPoint.getX(), (int) worldPoint.getY()), worldPoint.getY());
 	}
 
+/*
 	private Object onGet(Request request, Response response) throws Exception {
 		SignAtLocation s = signs.get(request.params(":uid"));
 		if (s != null) {
@@ -99,14 +116,19 @@ public class Activator extends JavaPlugin implements Listener {
 			return null;
 		}
 	}
+*/
 
 	private Object onPost(Request request, Response response) throws Exception {
 		CreateSignRequest req = gson.fromJson(request.body(), CreateSignRequest.class);
-		return createSign(defaultWorldLocation(req.getLatitude(), req.getLongitude()), req.getLines());
+		createOrUpdateSign(defaultWorldLocation(req.getLatitude(), req.getLongitude()), req.getType(), req.getValue());
+		return null;
 	}
+/*
 	private Object onPut(Request request, Response response) throws Exception {
 		UpdateSignRequest req = gson.fromJson(request.body(), UpdateSignRequest.class);
-		SignAtLocation signAtLocation = signs.get(request.params(":uid"));
+
+		HRMSign signAtLocation = signs.get(request.params(":uid"));
+
 		if (signAtLocation != null) {
 			getServer().getScheduler().runTask(this, () -> {
 				Sign sign = (Sign) signAtLocation.location.getBlock().getState();
@@ -115,56 +137,73 @@ public class Activator extends JavaPlugin implements Listener {
 					sign.setLine(i, line);
 				}
 				sign.update();
-				signs.put(request.params(":uid"), SignAtLocation.of(signAtLocation.location, req.getLines()));
+				signs.put(, SignAtLocation.of(signAtLocation.location, req.getLines()));
 			});
 		}
 		return null;
+
 	}
+*/
+
 	private Object onDelete(Request request, Response response) throws Exception {
-		SignAtLocation s = signs.get(request.params(":uid"));
+		DeleteRequest req = gson.fromJson(request.body(), DeleteRequest.class);
+
+		Location loc = defaultWorldLocation(req.getLatitude(), req.getLongitude());
+		HRMSign s = signs.get(SignPosition.of(loc));
+
 		if (s != null) {
-			getServer().getScheduler().runTask(this, () -> {
-				s.location.getBlock().setType(Material.AIR);
-			});
+			getServer().getScheduler().runTask(this, s::delete);
 		}
+
 		return null;
 	}
 
-	private String createSign(Location location, String[] lines) {
-		String uuid = UUID.randomUUID().toString();
+	private void createOrUpdateSign(Location location, SignType type, String value) {
 		getServer().getScheduler().runTask(this, () -> {
-			getLogger().info("Creating Sign @ " + location);
-			Block block = location.getBlock();
-			block.setType(Material.SIGN_POST);
-			Sign sign = (Sign) block.getState();
-			for (int i = 0; i < lines.length; i++) {
-				String line = lines[i];
-				sign.setLine(i, line);
+
+			HRMSign sign;
+			switch (type) {
+				case POLLUTION:
+					sign = new PollutionSign(location);
+					break;
+
+				case ACCIDENT:
+					sign = new AccidentSign(location);
+					break;
+
+				default:
+					sign = new DefaultSign(location);
 			}
-			sign.update();
-			signs.put(uuid, SignAtLocation.of(location, lines));
+
+			getLogger().info("Creating Sign @ " + location);
+
+			sign.update(value);
+
+			signs.put(SignPosition.of(location), sign);
 		});
-		return uuid;
 	}
 
 
-
-	@Override public void onEnable() {
+	@Override
+	public void onEnable() {
 		getServer().getPluginManager().registerEvents(this, this);
 		// Start spark server
 		init();
 
-		get("/:uid", "application/json", this::onGet, gson::toJson);
+		//get("/:uid", "application/json", this::onGet, gson::toJson);
 		post("/", "application/json", this::onPost, gson::toJson);
-		put("/:uid", "application/json", this::onPut, gson::toJson);
+//		put("/:uid", "application/json", this::onPut, gson::toJson);
 		delete("/:uid", "application/json", this::onDelete, gson::toJson);
 
 	}
 
-	@Override public void onDisable() {
+	@Override
+	public void onDisable() {
 		// Stop SPARK server
 		stop();
 	}
+
+//Todo schedule job to update the list of signs.
 
 
 	@EventHandler
@@ -172,68 +211,23 @@ public class Activator extends JavaPlugin implements Listener {
 		getLogger().info("Player logged in: " + evt.getPlayer().getDisplayName());
 	}
 
-	@Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-		System.out.println("Command issued by "+sender+": " + command);
+	@Override
+	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+		System.out.println("Command issued by " + sender + ": " + command);
 		Player pl = getServer().getPlayer(sender.getName());
-		if (pl != null) {
-			double treeIndex = calculateTreeIndex(pl.getLocation(), 10);
 
-			Location loc = pl.getLocation();
-			loc.add(loc.getDirection().setY(0).normalize().multiply(1));
+		Location loc = pl.getLocation();
+		loc.add(loc.getDirection().setY(0).normalize().multiply(1));
 
-			Block block = loc.getBlock();
-			block.setType(Material.SIGN_POST);
-
-			Sign sign = (Sign) block.getState();
-			sign.setLine(0, "Tree Index");
-			sign.setLine(1, Double.toString(treeIndex));
-			sign.update();
-
-			sender.sendMessage("DONE! Tree Index:" + treeIndex);
-
-			return true;
+		if (args.length == 0) {
+			createOrUpdateSign(loc, SignType.DEFAULT, "Bork Bork!");
+		} else if (args.length == 2) {
+			createOrUpdateSign(loc, SignType.of(args[0]), args[1]);
 		}
+
+		sender.sendMessage("DONE! Sign scheduled for creation!");
+
 		return false;
 	}
 
-	/**
-	 * The tree index is calculated from all the blocks with the type LEAF within a cube with the side blocks*2.
-	 *
-	 * The index is calculated by counting all the leaf blocks and multiply this by 3 and then divide this with the
-	 * total number of blocks in the cube.
-	 *
-	 * @param loc the location where we need to calculate the index.
-	 * @param blocks the number of blocks, times two that will be the side of the box. This means that the measure
-	 *               point is almost in the center bottom of the cube.
-	 *
-	 * @return the index.
-	 */
-	private double calculateTreeIndex(Location loc, int blocks) {
-		int scanBoxSide = blocks * 2;
-
-		double initalX = loc.getX() + blocks;
-		double initalY = loc.getY() + scanBoxSide;
-		double initalZ = loc.getZ() + blocks;
-
-		int count = 0;
-
-		for (int x = 0; x < scanBoxSide; x++) {
-			loc.setX(initalX - x);
-			for (int y = 0; y <= scanBoxSide; y++) {
-				loc.setY(initalY - y);
-				for(int z = 0; z < scanBoxSide; z++) {
-					loc.setZ(initalZ - z);
-					Block b = loc.getBlock();
-
-					if (b.getType().equals(Material.LEAVES) || b.getType().equals(Material.LEAVES_2)) {
-						count++;
-					}
-
-					//b.setType(Material.GLASS);
-				}
-			}
-		}
-
-		return (double) count * 10 / ((double)scanBoxSide * scanBoxSide * scanBoxSide);
-	}
 }

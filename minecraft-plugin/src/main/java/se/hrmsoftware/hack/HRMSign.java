@@ -5,7 +5,7 @@ package se.hrmsoftware.hack;
  */
 public interface HRMSign {
 
-	void update(double value);
+	void update(String value);
 	void delete();
 
 }

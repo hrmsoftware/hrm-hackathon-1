@@ -8,14 +8,6 @@
     <artifactId>hack</artifactId>
     <version>1.0-SNAPSHOT</version>
 
-    <repositories>
-        <repository>
-            <id>bukkit-repo</id>
-            <url>http://repo.bukkit.org/content/groups/public/</url>
-        </repository>
-    </repositories>
-
-
     <dependencies>
         <dependency>
             <groupId>org.bukkit</groupId>
@@ -38,8 +30,6 @@
             <groupId>com.grum</groupId>
             <artifactId>geocalc</artifactId>
             <version>0.5.1</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/geocalc-0.5.1.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -62,6 +52,26 @@
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <configuration>
+                    <artifactId>geocalc</artifactId>
+                    <groupId>com.grum</groupId>
+                    <version>0.5.1</version>
+                    <file>${project.basedir}/lib/geocalc-0.5.1.jar</file>
+                    <packaging>jar</packaging>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>install-file</goal>
                         </goals>
                     </execution>
                 </executions>
