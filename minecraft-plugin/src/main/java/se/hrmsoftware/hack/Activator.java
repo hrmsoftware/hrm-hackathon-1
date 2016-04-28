@@ -15,6 +15,7 @@ import se.hrmsoftware.hack.coordinates.Location2D;
 import se.hrmsoftware.hack.coordinates.MinecraftCoordinateSystem;
 import spark.Request;
 import spark.Response;
+import spark.Spark;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -188,6 +189,25 @@ public class Activator extends JavaPlugin implements Listener {
 	public void onEnable() {
 		getServer().getPluginManager().registerEvents(this, this);
 		// Start spark server
+		Spark.options("/*", (request,response)->{
+
+			String accessControlRequestHeaders = request.headers("Access-Control-Request-Headers");
+			if (accessControlRequestHeaders != null) {
+				response.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
+			}
+
+			String accessControlRequestMethod = request.headers("Access-Control-Request-Method");
+			if(accessControlRequestMethod != null){
+				response.header("Access-Control-Allow-Methods", accessControlRequestMethod);
+			}
+
+			return "OK";
+		});
+
+		Spark.before((request,response)->{
+			response.header("Access-Control-Allow-Origin", "*");
+		});
+
 		init();
 
 		//get("/:uid", "application/json", this::onGet, gson::toJson);
