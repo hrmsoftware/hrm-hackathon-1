@@ -8,12 +8,16 @@ import org.bukkit.block.Sign;
 public class PollutionSign  implements HRMSign {
 	private final Location location;
 
+	private Double pollutionValue;
+
 	public PollutionSign(Location location) {
 		this.location = location;
 	}
 
 	public void update(String value) {
-		double pollutionValue = Double.valueOf(value);
+		if (value != null) {
+			pollutionValue = Double.valueOf(value);
+		}
 		double treeIndex = calculateTreeIndex(location, 10);
 		render(pollutionValue, pollutionValue - treeEffect(pollutionValue, treeIndex));
 	}
@@ -27,7 +31,7 @@ public class PollutionSign  implements HRMSign {
 		location.getBlock().setType(Material.AIR);
 	}
 
-	public void render(double oldValue, double pollutionValue) {
+	private void render(double oldValue, double pollutionValue) {
 		Block block = location.getBlock();
 		block.setType(Material.SIGN_POST);
 		Sign sign = (Sign) block.getState();
