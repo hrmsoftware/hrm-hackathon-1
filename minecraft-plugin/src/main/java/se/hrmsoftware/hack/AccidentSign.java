@@ -21,7 +21,7 @@ class AccidentSign implements HRMSign {
 		Location loc = location.clone();
 		Block block = loc.getBlock();
 		block.setType(Material.NETHERRACK);
-		loc.setY(location.getY()+1);
+		loc.setY(loc.getY()+1);
 		loc.getBlock().setType(Material.FIRE);
 	}
 
