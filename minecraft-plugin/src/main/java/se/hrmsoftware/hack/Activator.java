@@ -1,6 +1,9 @@
 package se.hrmsoftware.hack;
 
-import com.google.gson.Gson;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Stream;
+
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -11,15 +14,14 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
-import se.hrmsoftware.hack.coordinates.Location2D;
-import se.hrmsoftware.hack.coordinates.MinecraftCoordinateSystem;
 import spark.Request;
 import spark.Response;
 import spark.Spark;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Stream;
+import se.hrmsoftware.hack.coordinates.Location2D;
+import se.hrmsoftware.hack.coordinates.MinecraftCoordinateSystem;
+
+import com.google.gson.Gson;
 
 import static spark.Spark.*;
 
@@ -89,6 +91,16 @@ public class Activator extends JavaPlugin implements Listener {
 		public SignType getType() {
 			return type;
 		}
+
+		@Override
+		public String toString() {
+			return "CreateSignRequest{" +
+					"latitude=" + latitude +
+					", longitude=" + longitude +
+					", value='" + value + '\'' +
+					", type=" + type +
+					'}';
+		}
 	}
 
 	private final Gson gson = new Gson();
@@ -104,46 +116,11 @@ public class Activator extends JavaPlugin implements Listener {
 				world.getHighestBlockYAt((int) worldPoint.getX(), (int) worldPoint.getY()), worldPoint.getY());
 	}
 
-/*
-	private Object onGet(Request request, Response response) throws Exception {
-		SignAtLocation s = signs.get(request.params(":uid"));
-		if (s != null) {
-			Map<String,Object> r = new HashMap<>();
-			r.put("lines", s.data);
-			return r;
-		} else {
-			response.status(404);
-			return null;
-		}
-	}
-*/
-
 	private Object onPost(Request request, Response response) throws Exception {
 		CreateSignRequest req = gson.fromJson(request.body(), CreateSignRequest.class);
-		createOrUpdateSign(defaultWorldLocation(req.getLatitude(), req.getLongitude()), req.getType(), req.getValue());
+		createOrUpdateSign(req.getLatitude(), req.getLongitude(), req.getType(), req.getValue());
 		return null;
 	}
-/*
-	private Object onPut(Request request, Response response) throws Exception {
-		UpdateSignRequest req = gson.fromJson(request.body(), UpdateSignRequest.class);
-
-		HRMSign signAtLocation = signs.get(request.params(":uid"));
-
-		if (signAtLocation != null) {
-			getServer().getScheduler().runTask(this, () -> {
-				Sign sign = (Sign) signAtLocation.location.getBlock().getState();
-				for (int i = 0; i < req.getLines().length; i++) {
-					String line = req.getLines()[i];
-					sign.setLine(i, line);
-				}
-				sign.update();
-				signs.put(, SignAtLocation.of(signAtLocation.location, req.getLines()));
-			});
-		}
-		return null;
-
-	}
-*/
 
 	private Object onDelete(Request request, Response response) throws Exception {
 		DeleteRequest req = gson.fromJson(request.body(), DeleteRequest.class);
@@ -158,9 +135,18 @@ public class Activator extends JavaPlugin implements Listener {
 		return null;
 	}
 
-	private void createOrUpdateSign(Location location, SignType type, String value) {
-		getServer().getScheduler().runTask(this, () -> {
+	private void createOrUpdateSign(Location location, SignType type, java.lang.String value) {
+		getServer().getScheduler().runTask(this, () -> createOrUpdateSign(type, value, location));
+	}
 
+	private void createOrUpdateSign(double latitude, double longitude, SignType type, java.lang.String value) {
+		getServer().getScheduler().runTask(this, () -> {
+			Location location = defaultWorldLocation(latitude, longitude);
+			createOrUpdateSign(type, value, location);
+		});
+	}
+
+	private void createOrUpdateSign(SignType type, String value, Location location) {
 			HRMSign sign;
 			switch (type) {
 				case POLLUTION:
@@ -181,7 +167,6 @@ public class Activator extends JavaPlugin implements Listener {
 			sign.update(value);
 
 			signs.put(SignPosition.of(location), sign);
-		});
 	}
 
 
@@ -210,13 +195,10 @@ public class Activator extends JavaPlugin implements Listener {
 
 		init();
 
-		//get("/:uid", "application/json", this::onGet, gson::toJson);
 		post("/", "application/json", this::onPost, gson::toJson);
-//		put("/:uid", "application/json", this::onPut, gson::toJson);
 		delete("/:uid", "application/json", this::onDelete, gson::toJson);
 
 		startScheduled();
-
 	}
 
 	@Override
