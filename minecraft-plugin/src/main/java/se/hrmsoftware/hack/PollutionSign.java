@@ -78,4 +78,12 @@ public class PollutionSign  implements HRMSign {
 
 		return (double) count / ((double)scanBoxSide * scanBoxSide * scanBoxSide);
 	}
+
+	@Override
+	public String toString() {
+		return "PollutionSign{" +
+				"location=" + location +
+				", pollutionValue=" + pollutionValue +
+				'}';
+	}
 }

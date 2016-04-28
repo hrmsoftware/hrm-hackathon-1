@@ -175,7 +175,7 @@ public class Activator extends JavaPlugin implements Listener {
 					sign = new DefaultSign(location);
 			}
 
-			getLogger().info("Creating Sign @ " + location);
+			getLogger().info("Creating Sign @ " + location + " (" + sign + ")");
 
 			sign.update(value);
 
