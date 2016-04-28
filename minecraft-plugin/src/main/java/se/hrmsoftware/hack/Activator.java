@@ -207,7 +207,7 @@ public class Activator extends JavaPlugin implements Listener {
 
 	private void startScheduled() {
 		BukkitScheduler scheduler = getServer().getScheduler();
-		scheduler.scheduleSyncRepeatingTask(this, () -> signs.values().stream().forEach(s -> s.update("")), 0L, 200L); //A second is 20 ticks.
+		scheduler.scheduleSyncRepeatingTask(this, () -> signs.values().stream().filter(s -> s instanceof PollutionSign).forEach(s -> s.update(null)), 0L, 200L); //A second is 20 ticks.
 	}
 
 	@EventHandler
