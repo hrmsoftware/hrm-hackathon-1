@@ -170,6 +170,7 @@ public class Activator extends JavaPlugin implements Listener {
 					sign = new AccidentSign(location);
 					break;
 
+				case WATERTEMP:
 				default:
 					sign = new DefaultSign(location);
 			}
