@@ -10,6 +10,7 @@ import org.bukkit.block.Sign;
 class DefaultSign implements HRMSign {
 
 	private final Location location;
+
 	DefaultSign(Location location) {
 		this.location = location;
 	}

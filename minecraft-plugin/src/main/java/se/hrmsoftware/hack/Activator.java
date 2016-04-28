@@ -2,10 +2,7 @@ package se.hrmsoftware.hack;
 
 import com.google.gson.Gson;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -13,6 +10,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitScheduler;
 import se.hrmsoftware.hack.coordinates.Location2D;
 import se.hrmsoftware.hack.coordinates.MinecraftCoordinateSystem;
 import spark.Request;
@@ -33,12 +31,13 @@ public class Activator extends JavaPlugin implements Listener {
 		DEFAULT("d");
 
 		private final String label;
+
 		SignType(String a) {
-			this.label=a;
+			this.label = a;
 		}
 
 		public static SignType of(String t) {
-			return Stream.of(values()).filter(v ->  v.label.equals(t)).findFirst().orElse(DEFAULT);
+			return Stream.of(values()).filter(v -> v.label.equals(t)).findFirst().orElse(DEFAULT);
 		}
 	}
 
@@ -149,7 +148,7 @@ public class Activator extends JavaPlugin implements Listener {
 		DeleteRequest req = gson.fromJson(request.body(), DeleteRequest.class);
 
 		Location loc = defaultWorldLocation(req.getLatitude(), req.getLongitude());
-		HRMSign s = signs.get(SignPosition.of(loc));
+		HRMSign s = signs.remove(SignPosition.of(loc));
 
 		if (s != null) {
 			getServer().getScheduler().runTask(this, s::delete);
@@ -195,16 +194,21 @@ public class Activator extends JavaPlugin implements Listener {
 //		put("/:uid", "application/json", this::onPut, gson::toJson);
 		delete("/:uid", "application/json", this::onDelete, gson::toJson);
 
+		startScheduled();
+
 	}
 
 	@Override
 	public void onDisable() {
 		// Stop SPARK server
 		stop();
+		getServer().getScheduler().cancelAllTasks();
 	}
 
-//Todo schedule job to update the list of signs.
-
+	private void startScheduled() {
+		BukkitScheduler scheduler = getServer().getScheduler();
+		scheduler.scheduleSyncRepeatingTask(this, () -> signs.values().stream().forEach(s -> s.update("")), 0L, 200L); //A second is 20 ticks.
+	}
 
 	@EventHandler
 	public void handle(PlayerLoginEvent evt) {
