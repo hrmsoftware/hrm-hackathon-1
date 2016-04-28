@@ -22,6 +22,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import se.hrmsoftware.hack.coordinates.Location2D;
+import se.hrmsoftware.hack.coordinates.MinecraftCoordinateSystem;
+
 import static spark.Spark.*;
 
 public class Activator extends JavaPlugin implements Listener {
@@ -39,22 +42,22 @@ public class Activator extends JavaPlugin implements Listener {
 	}
 
 	public static class CreateSignRequest {
-		private final Double x;
-		private final Double y;
+		private final Double latitude;
+		private final Double longitude;
 		private final String[] lines;
 
-		public CreateSignRequest(Double x, Double y, String[] lines) {
-			this.x = x;
-			this.y = y;
+		public CreateSignRequest(Double latitude, Double longitude, String[] lines) {
+			this.latitude = latitude;
+			this.longitude = longitude;
 			this.lines = lines;
 		}
 
-		public Double getX() {
-			return x;
+		public Double getLatitude() {
+			return latitude;
 		}
 
-		public Double getY() {
-			return y;
+		public Double getLongitude() {
+			return longitude;
 		}
 
 		public String[] getLines() {
@@ -74,12 +77,15 @@ public class Activator extends JavaPlugin implements Listener {
 	}
 	private final Gson gson = new Gson();
 	private final ConcurrentMap<String, SignAtLocation> signs = new ConcurrentHashMap<>();
+	private final MinecraftCoordinateSystem coordinateSystem = new MinecraftCoordinateSystem();
 
 	// REST-API
 
-	private Location defaultWorldLocation(double x, double y) {
+	private Location defaultWorldLocation(double latitude, double longitude) {
+		Location2D worldPoint = coordinateSystem.fromDecimalCoordinates(latitude, longitude);
 		World world = getServer().getWorlds().get(0);
-		return new Location(world, x, world.getHighestBlockYAt((int)x, (int)y), y);
+		return new Location(world, worldPoint.getX(),
+				world.getHighestBlockYAt((int)worldPoint.getX(), (int)worldPoint.getY()), worldPoint.getY());
 	}
 
 	private Object onGet(Request request, Response response) throws Exception {
@@ -96,7 +102,7 @@ public class Activator extends JavaPlugin implements Listener {
 
 	private Object onPost(Request request, Response response) throws Exception {
 		CreateSignRequest req = gson.fromJson(request.body(), CreateSignRequest.class);
-		return createSign(defaultWorldLocation(req.getX(), req.getY()), req.getLines());
+		return createSign(defaultWorldLocation(req.getLatitude(), req.getLongitude()), req.getLines());
 	}
 	private Object onPut(Request request, Response response) throws Exception {
 		UpdateSignRequest req = gson.fromJson(request.body(), UpdateSignRequest.class);
