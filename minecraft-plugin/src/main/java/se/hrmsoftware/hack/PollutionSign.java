@@ -38,9 +38,10 @@ public class PollutionSign  implements HRMSign {
 	}
 
 	private void render(double oldValue, double pollutionValue) {
-		location.getWorld().strikeLightningEffect(location);
-
 		Block block = location.getBlock();
+		if (block.getType() != Material.SIGN_POST) {
+			location.getWorld().strikeLightningEffect(location);
+		}
 		block.setType(Material.SIGN_POST);
 		Sign sign = (Sign) block.getState();
 		sign.setLine(0, "PPM");
