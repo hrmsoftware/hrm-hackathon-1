@@ -5,7 +5,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Stream;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -112,8 +115,17 @@ public class Activator extends JavaPlugin implements Listener {
 	private Location defaultWorldLocation(double latitude, double longitude) {
 		Location2D worldPoint = coordinateSystem.fromDecimalCoordinates(latitude, longitude);
 		World world = getServer().getWorlds().get(0);
-		return new Location(world, worldPoint.getX(),
-				world.getHighestBlockYAt((int) worldPoint.getX(), (int) worldPoint.getY()), worldPoint.getY());
+
+		Block b = world.getBlockAt((int) worldPoint.getX(),
+				world.getMaxHeight() - 1,
+				(int) worldPoint.getY());
+		while (b != null && b.getType() == Material.AIR &&
+				b.getRelative(BlockFace.DOWN) != null &&
+				b.getRelative(BlockFace.DOWN).getType() == Material.AIR) {
+			b = b.getRelative(BlockFace.DOWN);
+		}
+
+		return b.getLocation();
 	}
 
 	private Object onPost(Request request, Response response) throws Exception {
