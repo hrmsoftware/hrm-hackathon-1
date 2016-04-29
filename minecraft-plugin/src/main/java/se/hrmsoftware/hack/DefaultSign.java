@@ -17,6 +17,7 @@ class DefaultSign implements HRMSign {
 
 	@Override
 	public void update(String value) {
+		location.getWorld().strikeLightningEffect(location);
 		Block block = location.getBlock();
 		block.setType(Material.SIGN_POST);
 
@@ -27,10 +28,15 @@ class DefaultSign implements HRMSign {
 
 	@Override
 	public void delete() {
+		location.getWorld().strikeLightningEffect(location);
 		Block block = location.getBlock();
 		block.setType(Material.AIR);
 	}
 
+	@Override
+	public Location getLocation() {
+		return location.clone();
+	}
 
 	@Override
 	public String toString() {

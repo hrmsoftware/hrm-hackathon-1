@@ -28,10 +28,18 @@ public class PollutionSign  implements HRMSign {
 
 	@Override
 	public void delete() {
+		location.getWorld().strikeLightningEffect(location);
 		location.getBlock().setType(Material.AIR);
 	}
 
+	@Override
+	public Location getLocation() {
+		return location.clone();
+	}
+
 	private void render(double oldValue, double pollutionValue) {
+		location.getWorld().strikeLightningEffect(location);
+
 		Block block = location.getBlock();
 		block.setType(Material.SIGN_POST);
 		Sign sign = (Sign) block.getState();

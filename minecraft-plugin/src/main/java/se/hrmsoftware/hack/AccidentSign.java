@@ -19,6 +19,7 @@ class AccidentSign implements HRMSign {
 	@Override
 	public void update(String value) {
 		Location loc = location.clone();
+		loc.getWorld().strikeLightningEffect(loc);
 		Block block = loc.getBlock();
 		block.setType(Material.NETHERRACK);
 		loc.setY(loc.getY()+1);
@@ -28,10 +29,16 @@ class AccidentSign implements HRMSign {
 	@Override
 	public void delete() {
 		Location loc = location.clone();
+		loc.getWorld().strikeLightningEffect(loc);
 		Block block = loc.getBlock();
 		block.setType(Material.AIR);
 		loc.setY(loc.getY()+1);
 		loc.getBlock().setType(Material.AIR);
+	}
+
+	@Override
+	public Location getLocation() {
+		return location.clone();
 	}
 
 	@Override

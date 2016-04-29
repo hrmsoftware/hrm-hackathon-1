@@ -114,14 +114,21 @@ public class Activator extends JavaPlugin implements Listener {
 
 	private Location defaultWorldLocation(double latitude, double longitude) {
 		Location2D worldPoint = coordinateSystem.fromDecimalCoordinates(latitude, longitude);
+
+		HRMSign sign = signs.get(new SignPosition((int)worldPoint.getX(), (int)worldPoint.getY()));
+		if (sign != null) {
+			return sign.getLocation();
+		}
+
 		World world = getServer().getWorlds().get(0);
 
 		Block b = world.getBlockAt((int) worldPoint.getX(),
 				world.getMaxHeight() - 1,
 				(int) worldPoint.getY());
-		while (b != null && b.getType() == Material.AIR &&
+		while (b != null && (b.getType() == Material.AIR || b.getType() == Material.SIGN_POST) &&
 				b.getRelative(BlockFace.DOWN) != null &&
-				b.getRelative(BlockFace.DOWN).getType() == Material.AIR) {
+				(b.getRelative(BlockFace.DOWN).getType() == Material.AIR
+						|| b.getRelative(BlockFace.DOWN).getType() == Material.SIGN_POST)) {
 			b = b.getRelative(BlockFace.DOWN);
 		}
 
