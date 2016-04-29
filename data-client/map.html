@@ -18,12 +18,12 @@
                  var data = { "longitude" : lon, "latitude": lat, "value": "0", "type": "ACCIDENT" };
                  $.ajax({
                      type: "POST",
-                     url: "http://localhost:4567/",
+                     url: "http://172.20.10.202:4567/",
                      processData: false,
                      contentType: 'application/json',
                      data: JSON.stringify(data),
                      success: function(r) {}});
-                 alert("Created accident @ "+lat+"/"+lon);
+                 console.log("Created accident @ "+lat+"/"+lon);
                  });
          }
          google.maps.event.addDomListener(window, 'load', initialize);
